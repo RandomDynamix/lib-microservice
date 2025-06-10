@@ -29,7 +29,8 @@ export interface ScopeRestriction {
     site_access_id?:    string,
     site_id?:           string,
     member_id?:         string,
-    user_id?:           string
+    user_id?:           string,
+    entity_id?:         string
 }
 
 export class Microservice extends NATSClient {
@@ -299,8 +300,14 @@ export class Microservice extends NATSClient {
             if(!basePermission) baseAuthorization.permissions[permission] = proxyPermission;
             else {
                 switch(basePermission) {
+                    case "ENTITY":
+                        if (proxyPermission !== "ENTITY") {
+                            baseAuthorization.permissions[permission] = proxyPermission;
+                        }
+                        break;
+
                     case "OWNER":
-                        if (proxyPermission !== "OWNER") {
+                        if (proxyPermission !== "OWNER" && proxyPermission !== "ENTITY") {
                             baseAuthorization.permissions[permission] = proxyPermission;
                         }
                         break;
@@ -362,6 +369,14 @@ export class Microservice extends NATSClient {
                     assertedScope !== 'OWNER')  throw 'UNAUTHORIZED:  Requires OWNER Permission Scope or Greater';
                 break;
 
+            case 'ENTITY':
+                if( assertedScope !== '*' &&
+                    assertedScope !== 'SITE' &&
+                    assertedScope !== 'MEMBER' &&
+                    assertedScope !== 'OWNER' &&
+                    assertedScope !== 'ENTITY')  throw 'UNAUTHORIZED:  Requires ENTITY Permission Scope or Greater';
+                break;
+
             case 'NOAUTH':
                 return null; //Shortcut - no scope check, no restrictions
                 break;
@@ -370,9 +385,19 @@ export class Microservice extends NATSClient {
                 throw `SERVER ERROR:  Invalid Scope Requirement (${minScopeRequired})`;
         }
 
-        //Default to OWNER (lowest) Scope
+        //Default to OWNER Scope
+        //NOTE: A "new" scope has been introduced, called ENTITY, which is now the "lowest" scope; however,
+        //      it is a "special case" override to the OWNER scope (for external users).  Thus, it is NOT the default.
         let scopeRestriction: ScopeRestriction | null = { user_id: assertions.authentication.user_id };
         switch(assertedScope) {
+            case "ENTITY":          //NOTE:  uuidv4() is a fail-safe, in case an ENTITY scope is inadvertently granted to a non-external user
+                scopeRestriction =  { entity_id: assertions.authorization.entity_id ?? uuidv4() };
+                break;
+
+            case "OWNER":
+                //This is the default
+                break;
+
             case "MEMBER":
                 scopeRestriction = { member_id: assertions.authentication.member_id };
                 break;

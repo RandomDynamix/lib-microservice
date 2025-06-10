@@ -293,8 +293,13 @@ export class Microservice extends NATSClient {
                 baseAuthorization.permissions[permission] = proxyPermission;
             else {
                 switch (basePermission) {
+                    case "ENTITY":
+                        if (proxyPermission !== "ENTITY") {
+                            baseAuthorization.permissions[permission] = proxyPermission;
+                        }
+                        break;
                     case "OWNER":
-                        if (proxyPermission !== "OWNER") {
+                        if (proxyPermission !== "OWNER" && proxyPermission !== "ENTITY") {
                             baseAuthorization.permissions[permission] = proxyPermission;
                         }
                         break;
@@ -347,6 +352,14 @@ export class Microservice extends NATSClient {
                     assertedScope !== 'OWNER')
                     throw 'UNAUTHORIZED:  Requires OWNER Permission Scope or Greater';
                 break;
+            case 'ENTITY':
+                if (assertedScope !== '*' &&
+                    assertedScope !== 'SITE' &&
+                    assertedScope !== 'MEMBER' &&
+                    assertedScope !== 'OWNER' &&
+                    assertedScope !== 'ENTITY')
+                    throw 'UNAUTHORIZED:  Requires ENTITY Permission Scope or Greater';
+                break;
             case 'NOAUTH':
                 return null;
                 break;
@@ -355,6 +368,11 @@ export class Microservice extends NATSClient {
         }
         let scopeRestriction = { user_id: assertions.authentication.user_id };
         switch (assertedScope) {
+            case "ENTITY":
+                scopeRestriction = { entity_id: assertions.authorization.entity_id ?? uuidv4() };
+                break;
+            case "OWNER":
+                break;
             case "MEMBER":
                 scopeRestriction = { member_id: assertions.authentication.member_id };
                 break;

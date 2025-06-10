@@ -17,6 +17,7 @@ export interface ScopeRestriction {
     site_id?: string;
     member_id?: string;
     user_id?: string;
+    entity_id?: string;
 }
 export declare class Microservice extends NATSClient {
     sourceVersion: string;
